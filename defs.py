@@ -2,9 +2,16 @@ from datetime import datetime, date, time
 import codecs, sys
 
 
-def fields_str(fields_list):
+def fields_str(fields_list, table_name):
     result = ""
-    for col in fields_list: result += col + ","
+    for fld in fields_list: result += "{:s}.{:s},".format(table_name, fld)
+
+    return result[:-1]
+
+
+def fields_upd_str(fields_list, table1_name, table2_name):
+    result = ""
+    for fld in fields_list: result += "{0}.{2} = {1}.{2},".format(table1_name, table2_name, fld)
 
     return result[:-1]
 
