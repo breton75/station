@@ -102,7 +102,7 @@ def get_last_insert(mssql, tables_last_insertions, tableNAME):
 		mssql.cursor().execute("delete from %s.%s" % (mssql_SCHEMA, tableNAME))
 		mssql.commit()
 	
-	print("last insert %s %s" % (tableNAME, last_insert.strftime('%Y/%m/%d %H:%M:%S')))
+	# print("last insert %s %s" % (tableNAME, last_insert.strftime('%Y/%m/%d %H:%M:%S')))
 
 	return last_insert
 
@@ -113,12 +113,12 @@ def get_last_update(mssql, tables_last_updates, tableNAME):
 	if last_update == None: 
 		last_update = minDATE # raise Exception("Last insert value for table {} not found".format(tableNAME))
 	
-	print("last update %s %s" % (tableNAME, last_update.strftime('%Y/%m/%d %H:%M:%S')))
+	# print("last update %s %s" % (tableNAME, last_update.strftime('%Y/%m/%d %H:%M:%S')))
 
 	return last_update
 
 
-def insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, donotUpdate):
+def insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, FIELD_NAMES, donotUpdate):
 	try:
 	
 		# добавление
@@ -138,7 +138,7 @@ def insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_qu
 	
 		mssql.commit()
 
-		print("{:d} records inserted to {:s}".format(len(edel_data), tableNAME))
+		print("{:d} records inserted to {:s}\n".format(len(edel_data), tableNAME))
 	
 		if donotUpdate:
 			return
@@ -162,21 +162,21 @@ def insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_qu
 		mssql.cursor().execute("select * into {0}.{1} from {0}.{2} where 0 = 1".format(mssql_SCHEMA, tableNAME_upd, tableNAME))
 		mssql.commit()
 			
-		cmd = str(bcpCMD).format(mssql_SCHEMA, tableNAME, bcpFILE.format(CWD, tableNAME_upd), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
+		cmd = str(bcpCMD).format(mssql_SCHEMA, tableNAME_upd, bcpFILE.format(CWD, tableNAME_upd), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
 		p = subprocess.run(cmd)
 		print(cmd)
 	
-		fupdstr = defs.fields_upd_str(RESERVE.RESERVE_FIELD_NAMES, tableNAME, tableNAME_upd)
+		fupdstr = defs.fields_upd_str(FIELD_NAMES, tableNAME, tableNAME_upd)
 		mssql.cursor().execute("UPDATE {0}.{1} SET {3} from {0}.{2} where {0}.{1}.ID = {0}.{2}.ID ".format(mssql_SCHEMA, tableNAME, tableNAME_upd, fupdstr))
 		mssql.cursor().execute("update {0}.{1} set last_update = '{2}' where tbl_name = '{3}'".format(mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), tableNAME))
 		mssql.cursor().execute("drop table %s.%s" % (mssql_SCHEMA, tableNAME_upd))
 		mssql.commit()
 
-		print("{:d} records updated in {:s}".format(len(edel_data), tableNAME))
+		print("{:d} records updated in {:s}\n".format(len(edel_data), tableNAME))
 
 
 	except Exception as E:
-		print('error on update %s: %s' % (tableNAME, E), file=sys.stderr)
+		print('error on update %s: %s\n' % (tableNAME, E), file=sys.stderr)
 
 
 
@@ -205,31 +205,34 @@ try:
 
 	# # ----------- RESERVE ------------- #
 	tableNAME = "RESERVE"
+	print("\n----------- %s ----------" % tableNAME)
 	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
 	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
 	select_for_insert_query = RESERVE.select_for_insert_query(last_insert)
 	select_for_update_query = RESERVE.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, last_insert == minDATE)
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, RESERVE.RESERVE_FIELD_NAMES, last_insert == minDATE)
 
 
 	# # # ----------- PERSON ------------- #
 	tableNAME = "PERSON"
+	print("\n----------- %s ----------" % tableNAME)
 	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
 	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
 	select_for_insert_query = PERSON.select_for_insert_query(last_insert)
 	select_for_update_query = PERSON.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, last_insert == minDATE)
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERSON.PERSON_FIELD_NAMES, last_insert == minDATE)
 
 	# # # ----------- PERIOD ------------- #
 	tableNAME = "PERIOD"
+	print("\n----------- %s ----------" % tableNAME)
 	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
 	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
 	select_for_insert_query = PERIOD.select_for_insert_query(last_insert)
 	select_for_update_query = PERIOD.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, last_insert == minDATE)
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERIOD.PERIOD_FIELD_NAMES, last_insert == minDATE)
 
 
 	# export_RESERVE(mssql, edelRESERVEdata, 'RESERVE', 'sv')
