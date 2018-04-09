@@ -11,6 +11,9 @@ import os
 import RESERVE
 import PERSON
 import PERIOD
+import ROOM
+import ROOMTYPE
+import MAINROOMTYPE
 
 import defs
 
@@ -211,7 +214,7 @@ try:
 	select_for_insert_query = RESERVE.select_for_insert_query(last_insert)
 	select_for_update_query = RESERVE.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, RESERVE.RESERVE_FIELD_NAMES, last_insert == minDATE)
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, RESERVE.FIELD_NAMES, last_insert == minDATE)
 
 
 	# # # ----------- PERSON ------------- #
@@ -222,7 +225,7 @@ try:
 	select_for_insert_query = PERSON.select_for_insert_query(last_insert)
 	select_for_update_query = PERSON.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERSON.PERSON_FIELD_NAMES, last_insert == minDATE)
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERSON.FIELD_NAMES, last_insert == minDATE)
 
 	# # # ----------- PERIOD ------------- #
 	tableNAME = "PERIOD"
@@ -232,7 +235,50 @@ try:
 	select_for_insert_query = PERIOD.select_for_insert_query(last_insert)
 	select_for_update_query = PERIOD.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERIOD.PERIOD_FIELD_NAMES, last_insert == minDATE)
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERIOD.FIELD_NAMES, last_insert == minDATE)
+
+
+	# # # ----------- ROOM ------------- #
+	tableNAME = "ROOM"
+	print("\n----------- %s ----------" % tableNAME)
+	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
+	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
+	select_for_insert_query = ROOM.select_for_insert_query(last_insert)
+	select_for_update_query = ROOM.select_for_update_query(last_update)
+
+	mssql.cursor().execute("delete from %s.%s" % (mssql_SCHEMA, tableNAME))
+	mssql.commit()
+
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, ROOM.FIELD_NAMES, True)
+
+
+	# # # ----------- ROOMTYPE ------------- #
+	tableNAME = "ROOMTYPE"
+	print("\n----------- %s ----------" % tableNAME)
+	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
+	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
+	select_for_insert_query = ROOMTYPE.select_for_insert_query(last_insert)
+	select_for_update_query = ROOMTYPE.select_for_update_query(last_update)
+
+	mssql.cursor().execute("delete from %s.%s" % (mssql_SCHEMA, tableNAME))
+	mssql.commit()
+
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, ROOMTYPE.FIELD_NAMES, True)
+
+
+	# # # ----------- MAINROOMTYPE ------------- #
+	tableNAME = "MAINROOMTYPE"
+	print("\n----------- %s ----------" % tableNAME)
+	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
+	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
+	select_for_insert_query = MAINROOMTYPE.select_for_insert_query(last_insert)
+	select_for_update_query = MAINROOMTYPE.select_for_update_query(last_update)
+
+	mssql.cursor().execute("delete from %s.%s" % (mssql_SCHEMA, tableNAME))
+	mssql.commit()
+
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, MAINROOMTYPE.FIELD_NAMES, True)
+
 
 
 	# export_RESERVE(mssql, edelRESERVEdata, 'RESERVE', 'sv')

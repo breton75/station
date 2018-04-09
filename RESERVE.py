@@ -2,7 +2,7 @@ import defs
 
 # RESERVE = 'RESERVE'
 
-RESERVE_FIELD_NAMES = ["ApplicableDiscountCard", #:"bigint",
+FIELD_NAMES = ["ApplicableDiscountCard", #:"bigint",
                        "Arrival", #:"date",
                        "ARRIVALTIME", #:"datetime",
                        "AUTOALLOC", #:"float",
@@ -41,11 +41,11 @@ RESERVE_FIELD_NAMES = ["ApplicableDiscountCard", #:"bigint",
                         
 
 def select_for_insert_query(last_update):
-        return "select " + defs.fields_str(RESERVE_FIELD_NAMES, 'RESERVE') + " from Admin." + 'RESERVE' + \
+        return "select " + defs.fields_str(FIELD_NAMES, 'RESERVE') + " from Admin." + 'RESERVE' + \
         " where CREATEDTIME > '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + "'"
 
 
 def select_for_update_query(last_update):
-        return "select " + defs.fields_str(RESERVE_FIELD_NAMES, 'RESERVE') + " from Admin." + 'RESERVE' + \
+        return "select " + defs.fields_str(FIELD_NAMES, 'RESERVE') + " from Admin." + 'RESERVE' + \
         " where RESERVE.CREATEDTIME < '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + \
         "' and RESERVE.UPDATEDTIME > '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + "'"
