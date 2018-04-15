@@ -1,0 +1,40 @@
+WITH aaa as(
+	SELECT
+		Admin.PERSON.RESERVID as rid,
+		MIN( Admin.PERSON.ID ) as pid
+	FROM
+		Admin.PERSON
+	GROUP BY
+		RESERVID
+),
+pers as (SELECT
+			aaa.pid as PERSID,
+			aaa.rid as RESERVID,
+			(
+				Admin.PERSON.SURNAME + ' ' + Admin.PERSON.FIRSTNAME
+			) as PERSNAME,
+			Admin.PERSON.PERSONNUM AS PERSONNUM,
+			Admin.PERSON.BIRTHDATE AS BIRTHDATE,
+			Admin.PERSON.COUNTRY AS COUNTRY,
+			Admin.PERSON.SEX AS SEX
+		FROM
+			aaa
+		LEFT JOIN Admin.PERSON on
+			aaa.pid = Admin.PERSON.ID)
+SELECT
+--	count()
+	Admin.RESERVE.ID as RESERVID,
+	Admin.RESERVE.CREATEDTIME AS CREATEDTIME,
+	pers.PERSID,
+	pers.PERSNAME,
+	pers.BIRTHDATE,
+	pers.COUNTRY,
+	pers.SEX
+FROM
+	Admin.RESERVE
+LEFT JOIN pers ON Admin.RESERVE.ID = pers.RESERVID
+WHERE
+--	Admin.RESERVE.CREATEDTIME > '2018-04-01 00:00:00'
+--	and 
+	Admin.RESERVE.RESNUM = 145780 
+--Admin.RESERVE.ID
