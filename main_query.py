@@ -1,7 +1,7 @@
-WITH aaa as(
+WITH P as(
 	SELECT
-		Admin.PERSON.RESERVID as rid,
-		MIN( Admin.PERSON.ID ) as pid
+		Admin.PERSON.RESERVID as ReservId,
+		MIN( Admin.PERSON.ID ) as PersonId
 	FROM
 		Admin.PERSON
 	GROUP BY
@@ -20,8 +20,8 @@ Segment AS(
 ),
 Person AS(
 	SELECT
-		aaa.pid as Id,
-		aaa.rid as ReservId,
+		P.PersonId as Id,
+		P.ReservId as ReservId,
 		(
 			Admin.PERSON.SURNAME + ' ' + Admin.PERSON.FIRSTNAME
 		) as Name,
@@ -29,37 +29,65 @@ Person AS(
 		Admin.PERSON.BIRTHDATE AS Birthdate,
 		Admin.PERSON.COUNTRY AS Country,
 		Admin.PERSON.SEX AS Sex,
+		Admin.PERSON.EMAIL AS Email,
 		Segment.Id AS SegmentId,
 		Segment.Name AS SegmentName,
 		Segment.ShortName AS SegmentShortName
 	FROM
-		aaa
+		P
 	LEFT JOIN Admin.PERSON on
-		aaa.pid = Admin.PERSON.ID
+		P.PersonId = Admin.PERSON.ID
 	LEFT JOIN Segment ON
-		aaa.pid = Segment.PersonId
+		P.PersonId = Segment.PersonId
+),
+R AS(
+	SELECT
+		Admin.ROOMTYPE.ID AS TypeId,
+		Admin.MAINROOMTYPE.NAME AS HotelName
+	FROM
+		Admin.ROOMTYPE
+	LEFT JOIN Admin.MAINROOMTYPE ON
+		Admin.MAINROOMTYPE.ID = Admin.ROOMTYPE.MAINTYPEID
+),
+Hotel AS(
+	SELECT
+		R.HotelName AS Name,
+		Admin.ROOM."NUMBER" AS Room,
+		Admin.PERIOD.RESERVID AS ReserveId
+	FROM
+		Admin.ROOM
+	LEFT JOIN Admin.PERIOD ON
+		Admin.PERIOD.ROOMID = Admin.ROOM.ID
+	LEFT JOIN R ON
+		Admin.ROOM.TYPEID = R.TypeId
 ) SELECT
-	--	count()
-	Admin.RESERVE.ID as ReservId,
-	Admin.RESERVE.CREATEDTIME AS CreatedDate,
-	Person.Id,
-	Person.Name,
-	Person.Birthdate,
-	Person.Country,
-	Person.Sex,
-	Person.SegmentId,
-	Person.SegmentName,
-	Person.SegmentShortName,
-	Admin.PERIOD.BEGINDATE,
-	Admin.PERIOD.ENDDATE
---	Admin.PERIOD
+--	count()
+ Admin.RESERVE.ID as ReservId,
+	Admin.RESERVE.CREATEDTIME AS CreatedTime,
+	Admin.RESERVE.UPDATEDTIME AS UpdatedTime,
+	Person.Id AS PersonId,
+	Person.Name AS PeronName,
+	Person.Birthdate AS PersonBirthdate,
+	Person.Country AS PersonCountry,
+	Person.Sex AS PersonSex,
+	Person.SegmentId AS SegmentId,
+	Person.SegmentName AS SegmentName,
+	Person.SegmentShortName AS SegmentShortName,
+	Admin.PERIOD.BEGINDATE AS PeriodBegin,
+	Admin.PERIOD.ENDDATE AS PeriodEnd,
+	Hotel.Name AS HotelName,
+	Hotel.Room AS HotelRoom
 FROM
 	Admin.RESERVE
 LEFT JOIN Person ON
 	Admin.RESERVE.ID = Person.ReservId
+LEFT JOIN Hotel ON
+	Admin.RESERVE.ID = Hotel.ReserveId
 LEFT JOIN Admin.PERIOD ON
 	Admin.PERIOD.RESERVID = Admin.RESERVE.ID
+LEFT JOIN Admin.PERMANENTAGENT ON
+	Admin.PERMANENTAGENT.ID = Admin.RESERVE.TRAVELAGENTID
 WHERE
-	--	Admin.RESERVE.CREATEDTIME > '2018-04-01 00:00:00'
+	Admin.RESERVE.CREATEDTIME > '2018-04-01 00:00:00'
  --	and 
- Admin.RESERVE.RESNUM = 145780 --Admin.RESERVE.ID
+-- Admin.RESERVE.RESNUM = 145780 --Admin.RESERVE.ID
