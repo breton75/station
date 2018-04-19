@@ -1,15 +1,17 @@
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 import pyodbc
 import pypyodbc
 import sqlalchemy
 import codecs, sys
 import etl_sql
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 import subprocess
 import os
 
 import ReservesByDays
-import Reserves
+# import Reserves
 
 
 import defs
@@ -122,10 +124,27 @@ def insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_qu
 	try:
 	
 		# добавление
-		edel_data = pd.read_sql(select_for_insert_query, edel)
-	
-		edel_data.to_csv(path_or_buf=bcpFILE.format(CWD, tableNAME), index=False, sep=bcpSEP, header=False)
+		edel_data = pd.read_sql(select_for_insert_query, edel) #, index_col=ReservesByDays.MS_ReservesByDays_FIELDS)
+
+		edel_data.to_csv(path_or_buf=bcpFILE.format(CWD, tableNAME + "1"), index=False, sep=bcpSEP, header=False, columns=ReservesByDays.MS_ReservesByDays_FIELDS)
 		print("{:d} records for insert to {:s}".format(len(edel_data), tableNAME))
+
+		f = open(bcpFILE.format(CWD, tableNAME + "2"), "w", encoding="utf8")
+		if not f: raise Exception("cant open file for write")
+
+		for idx in range(len(edel_data.values)):
+			dtb = edel_data.loc[idx, "periodbegin"]
+			print("dtb")
+			dte = edel_data.loc[idx, "periodend"]
+			while dtb <= dte:
+				f.write(dtb.isoformat() + bcpSEP + str(edel_data.loc[idx, "сумма"]) + bcpSEP + str(edel_data.loc[idx, "reservid"]) + "\n")
+				dtb += timedelta(days=1)
+
+		f.close()
+		print("written")
+
+		return
+
 			
 		cmd = str(bcpCMD).format(mssql_SCHEMA, tableNAME, bcpFILE.format(CWD, tableNAME), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
 		p = subprocess.run(cmd) #, shell=True, stdin=PIPE, stdout=PIPE, stderr=subprocess.STDOUT, close_fds=True)
@@ -204,25 +223,25 @@ try:
 
 
 	# # ----------- БрониПоДням ------------- #
-	tableNAME = "БрониПоДням"
+	tableNAME = "ReservesByDays"
 	print("\n----------- %s ----------" % tableNAME)
 	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
 	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
-	select_for_insert_query = RESERVE.select_for_insert_query(last_insert)
-	select_for_update_query = RESERVE.select_for_update_query(last_update)
+	select_for_insert_query = ReservesByDays.select_for_insert_query(last_insert)
+	select_for_update_query = "" # RESERVE.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, RESERVE.FIELD_NAMES, last_insert == minDATE)
+	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, ReservesByDays.FIELD_NAMES, last_insert == minDATE)
 
 
 	# # # ----------- Брони ------------- #
-	tableNAME = "Брони"
-	print("\n----------- %s ----------" % tableNAME)
-	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
-	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
-	select_for_insert_query = PERSON.select_for_insert_query(last_insert)
-	select_for_update_query = PERSON.select_for_update_query(last_update)
+	# tableNAME = "Reserves"
+	# print("\n----------- %s ----------" % tableNAME)
+	# last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
+	# last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
+	# select_for_insert_query = PERSON.select_for_insert_query(last_insert)
+	# select_for_update_query = PERSON.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERSON.FIELD_NAMES, last_insert == minDATE)
+	# insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, PERSON.FIELD_NAMES, last_insert == minDATE)
 
 
 

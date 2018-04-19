@@ -15,103 +15,129 @@ FIELD_NAMES = ["ApplicableDiscountCard", #:"bigint",
                 "CREATEDLOGIN", #:"varchar(max)",
                 "CREATEDTIME"]
                         
+MS_Reserves_FIELDS = ["ReservId",
+                      "CreatedTime",
+                      "UpdatedTime",
+                      "PersonId",
+                      "PersonName",
+                      "PersonBirthdate",
+                      "PersonCountry",
+                      "PersonSex",
+                      "SegmentId",
+                      "SegmentName",
+                      "SegmentShortName",
+                      "PeriodBegin",
+                      "PeriodEnd",
+                      "HotelName",
+                      "HotelRoom"]
+
+MS_ReservesByDays_FIELDS = ["КодБронирования",
+                      "Сегмент",
+                      "Источник",
+                      "Отель",
+                      "НомерКомнаты",
+                      "ФИО",
+                      "Пол",
+                      "Страна",
+                      "ЭлектроннаяПочта"]
 
 def select_for_insert_query(last_update):
-  script = "WITH P as(" + \
-           "    SELECT" + \
-           "    Admin.PERSON.RESERVID as ReservId," + \
-           "    MIN( Admin.PERSON.ID ) as PersonId" + \
-           "  FROM" + \
-           "    Admin.PERSON" + \
-           "  GROUP BY" + \
-           "    RESERVID" + \
-           ")," + \
-           "Segment AS(" + \
-           "  SELECT" + \
-           "    Admin.PERSONSEGMENTRELATION.SEGMENTID AS Id," + \
-           "    Admin.PERSONSEGMENT.NAME as Name," + \
-           "    Admin.PERSONSEGMENT.SHORTNAME as ShortName," + \
-           "    Admin.PERSONSEGMENTRELATION.PERSONID as PersonId" + \
-           "  FROM" + \
-           "    Admin.PERSONSEGMENTRELATION" + \
-           "  LEFT JOIN Admin.PERSONSEGMENT on" + \
-           "    Admin.PERSONSEGMENT.ID = Admin.PERSONSEGMENTRELATION.SEGMENTID" + \
-           ")," + \
-           "Person AS(" + \
-           "  SELECT" + \
-           "    P.PersonId as Id," + \
-           "    P.ReservId as ReservId," + \
-           "    (" + \
-           "      Admin.PERSON.SURNAME + ' ' + Admin.PERSON.FIRSTNAME" + \
-           "    ) as Name," + \
-           "    Admin.PERSON.PERSONNUM AS Num," + \
-           "    Admin.PERSON.BIRTHDATE AS Birthdate," + \
-           "    Admin.PERSON.COUNTRY AS Country," + \
-           "    Admin.PERSON.SEX AS Sex," + \
-           "    Admin.PERSON.EMAIL AS Email," + \
-           "    Segment.Id AS SegmentId," + \
-           "    Segment.Name AS SegmentName," + \
-           "    Segment.ShortName AS SegmentShortName" + \
-           "  FROM" + \
-           "    P" + \
-           "  LEFT JOIN Admin.PERSON on" + \
-           "    P.PersonId = Admin.PERSON.ID" + \
-           "  LEFT JOIN Segment ON" + \
-           "    P.PersonId = Segment.PersonId" + \
-           ")," + \
-           "R AS(" + \
-           "  SELECT" + \
-           "    Admin.ROOMTYPE.ID AS TypeId," + \
-           "    Admin.MAINROOMTYPE.NAME AS HotelName" + \
-           "  FROM" + \
-           "    Admin.ROOMTYPE" + \
-           "  LEFT JOIN Admin.MAINROOMTYPE ON" + \
-           "    Admin.MAINROOMTYPE.ID = Admin.ROOMTYPE.MAINTYPEID" + \
-           ")," + \
-           "Hotel AS(" + \
-           "  SELECT" + \
-           "    R.HotelName AS Name," + \
-           "    Admin.ROOM.\"NUMBER\" AS Room," + \
-           "    Admin.PERIOD.RESERVID AS ReserveId" + \
-           "  FROM" + \
-           "    Admin.ROOM" + \
-           "  LEFT JOIN Admin.PERIOD ON" + \
-           "    Admin.PERIOD.ROOMID = Admin.ROOM.ID" + \
-           "  LEFT JOIN R ON" + \
-           "    Admin.ROOM.TYPEID = R.TypeId" + \
-           ") SELECT" + \
-           "  Admin.RESERVE.ID as ReservId," + \
-           "  Admin.RESERVE.CREATEDTIME AS CreatedTime," + \
-           "  Admin.RESERVE.UPDATEDTIME AS UpdatedTime," + \
-           "  Person.Id AS PersonId," + \
-           "  Person.Name AS PeronName," + \
-           "  Person.Birthdate AS PersonBirthdate," + \
-           "  Person.Country AS PersonCountry," + \
-           "  Person.Sex AS PersonSex," + \
-           "  Person.SegmentId AS SegmentId," + \
-           "  Person.SegmentName AS SegmentName," + \
-           "  Person.SegmentShortName AS SegmentShortName," + \
-           "  Admin.PERIOD.BEGINDATE AS PeriodBegin," + \
-           "  Admin.PERIOD.ENDDATE AS PeriodEnd," + \
-           "  Hotel.Name AS HotelName," + \
-           "  Hotel.Room AS HotelRoom" + \
-           "FROM" + \
-           "  Admin.RESERVE" + \
-           "LEFT JOIN Person ON" + \
-           "  Admin.RESERVE.ID = Person.ReservId" + \
-           "LEFT JOIN Hotel ON" + \
-           "  Admin.RESERVE.ID = Hotel.ReserveId" + \
-           "LEFT JOIN Admin.PERIOD ON" + \
-           "  Admin.PERIOD.RESERVID = Admin.RESERVE.ID" + \
-           "LEFT JOIN Admin.PERMANENTAGENT ON" + \
-           "  Admin.PERMANENTAGENT.ID = Admin.RESERVE.TRAVELAGENTID" + \
-           "WHERE" + \
-           "  Admin.RESERVE.CREATEDTIME > '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + "'"
-           
+  script = "WITH P as (" + "\n" + \
+           "    SELECT " + "\n" + \
+           "    Admin.PERSON.RESERVID as ReservId, " + "\n" + \
+           "    MIN( Admin.PERSON.ID ) as PersonId " + "\n" + \
+           "  FROM " + "\n" + \
+           "    Admin.PERSON " + "\n" + \
+           "  GROUP BY " + "\n" + \
+           "    RESERVID " + "\n" + \
+           "), " + "\n" + \
+           "Segment AS( " + "\n" + \
+           "  SELECT " + "\n" + \
+           "    Admin.PERSONSEGMENTRELATION.SEGMENTID AS Id, " + "\n" + \
+           "    Admin.PERSONSEGMENT.NAME as Name, " + "\n" + \
+           "    Admin.PERSONSEGMENT.SHORTNAME as ShortName, " + "\n" + \
+           "    Admin.PERSONSEGMENTRELATION.PERSONID as PersonId " + "\n" + \
+           "  FROM " + "\n" + \
+           "    Admin.PERSONSEGMENTRELATION " + "\n" + \
+           "  LEFT JOIN Admin.PERSONSEGMENT on " + "\n" + \
+           "    Admin.PERSONSEGMENT.ID = Admin.PERSONSEGMENTRELATION.SEGMENTID " + "\n" + \
+           "), " + "\n" + \
+           "Person AS(" + "\n" + \
+           "  SELECT" + "\n" + \
+           "    P.PersonId as Id," + "\n" + \
+           "    P.ReservId as ReservId," + "\n" + \
+           "    (" + "\n" + \
+           "      Admin.PERSON.SURNAME + ' ' + Admin.PERSON.FIRSTNAME" + "\n" + \
+           "    ) as Name," + "\n" + \
+           "    Admin.PERSON.PERSONNUM AS Num," + "\n" + \
+           "    Admin.PERSON.BIRTHDATE AS Birthdate," + "\n" + \
+           "    Admin.PERSON.COUNTRY AS Country," + "\n" + \
+           "    Admin.PERSON.SEX AS Sex," + "\n" + \
+           "    Admin.PERSON.EMAIL AS Email," + "\n" + \
+           "    Segment.Id AS SegmentId," + "\n" + \
+           "    Segment.Name AS SegmentName," + "\n" + \
+           "    Segment.ShortName AS SegmentShortName" + "\n" + \
+           "  FROM" + "\n" + \
+           "    P" + "\n" + \
+           "  LEFT JOIN Admin.PERSON on" + "\n" + \
+           "    P.PersonId = Admin.PERSON.ID" + "\n" + \
+           "  LEFT JOIN Segment ON" + "\n" + \
+           "    P.PersonId = Segment.PersonId" + "\n" + \
+           ")," + "\n" + \
+           "R AS(" + "\n" + \
+           "  SELECT " + "\n" + \
+           "    Admin.ROOMTYPE.ID AS TypeId," + "\n" + \
+           "    Admin.MAINROOMTYPE.NAME AS HotelName" + "\n" + \
+           "  FROM" + "\n" + \
+           "    Admin.ROOMTYPE" + "\n" + \
+           "  LEFT JOIN Admin.MAINROOMTYPE ON" + "\n" + \
+           "    Admin.MAINROOMTYPE.ID = Admin.ROOMTYPE.MAINTYPEID" + "\n" + \
+           ")," + "\n" + \
+           "Hotel AS(" + "\n" + \
+           "  SELECT" + "\n" + \
+           "    R.HotelName AS Name," + "\n" + \
+           "    Admin.ROOM.\"NUMBER\" AS Room," + "\n" + \
+           "    Admin.PERIOD.RESERVID AS ReserveId" + "\n" + \
+           "  FROM" + "\n" + \
+           "    Admin.ROOM" + "\n" + \
+           "  LEFT JOIN Admin.PERIOD ON" + "\n" + \
+           "    Admin.PERIOD.ROOMID = Admin.ROOM.ID" + "\n" + \
+           "  LEFT JOIN R ON" + "\n" + \
+           "    Admin.ROOM.TYPEID = R.TypeId" + "\n" + \
+           ") SELECT" + "\n" + \
+           "  Admin.RESERVE.ID as КодБронирования," + "\n" + \
+           "  Person.SegmentName AS Сегмент," + "\n" + \
+           "  \"kk\" AS Источник," + "\n" + \
+           "  Hotel.Name AS Отель," + "\n" + \
+           "  Hotel.Room AS НомерКомнаты," + "\n" + \
+           "  Person.Name AS ФИО," + "\n" + \
+           "  Person.Sex AS Пол," + "\n" + \
+           "  Person.Country AS Страна," + "\n" + \
+           "  Person.Email AS ЭлектроннаяПочта," + "\n" + \
+           "  Admin.RESERVE.CREATEDTIME AS CreatedTime," + "\n" + \
+           "  Admin.RESERVE.UPDATEDTIME AS UpdatedTime," + "\n" + \
+           "  Admin.RESERVE.ROOMPRICE AS Сумма," + "\n" + \
+           "  Person.Birthdate AS PersonBirthdate," + "\n" + \
+           "  Admin.PERIOD.BEGINDATE AS PeriodBegin," + "\n" + \
+           "  Admin.PERIOD.ENDDATE AS PeriodEnd" + "\n" + \
+           "FROM" + "\n" + \
+           "  Admin.RESERVE" + "\n" + \
+           "LEFT JOIN Person ON" + "\n" + \
+           "  Admin.RESERVE.ID = Person.ReservId" + "\n" + \
+           "LEFT JOIN Hotel ON" + "\n" + \
+           "  Admin.RESERVE.ID = Hotel.ReserveId" + "\n" + \
+           "LEFT JOIN Admin.PERIOD ON" + "\n" + \
+           "  Admin.PERIOD.RESERVID = Admin.RESERVE.ID" + "\n" + \
+           "LEFT JOIN Admin.PERMANENTAGENT ON" + "\n" + \
+           "  Admin.PERMANENTAGENT.ID = Admin.RESERVE.TRAVELAGENTID" + "\n" + \
+           "WHERE" + "\n" + \
+           "  Admin.RESERVE.CREATEDTIME > '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + "'" + "\n" + \
+           "ORDER BY Admin.RESERVE.CREATEDTIME ASC"
+
   return script
 
 
 def select_for_update_query(last_update):
-        return "select " + defs.fields_str(FIELD_NAMES, 'RESERVE') + " from Admin." + 'RESERVE' + \
-        " where RESERVE.CREATEDTIME < '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + \
+        return "select " + defs.fields_str(FIELD_NAMES, 'RESERVE') + " from Admin." + 'RESERVE' + "\n" + \
+        " where RESERVE.CREATEDTIME < '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + "\n" + \
         "' and RESERVE.UPDATEDTIME > '" + last_update.strftime('%Y/%m/%d %H:%M:%S') + "'"
