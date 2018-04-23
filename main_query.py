@@ -4,19 +4,31 @@ WITH P as(
 		MIN( Admin.PERSON.ID ) as PersonId
 	FROM
 		Admin.PERSON
+	WHERE
+		Admin.PERSON.RESERVID IS NOT NULL
 	GROUP BY
 		RESERVID
 ),
-Segment AS(
+PSR AS(
 	SELECT
-		Admin.PERSONSEGMENTRELATION.SEGMENTID AS Id,
-		Admin.PERSONSEGMENT.NAME as Name,
-		Admin.PERSONSEGMENT.SHORTNAME as ShortName,
-		Admin.PERSONSEGMENTRELATION.PERSONID as PersonId
+		Admin.PERSONSEGMENTRELATION.PERSONID as PersonId,
+		MIN( Admin.PERSONSEGMENTRELATION.SEGMENTID ) AS SegmentId
 	FROM
 		Admin.PERSONSEGMENTRELATION
+	WHERE
+		PersonId IS NOT NULL
+	GROUP BY
+		PersonId
+),
+Segment AS(
+	SELECT
+		PSR.PersonId AS PersonId,
+		Admin.PERSONSEGMENT.NAME as Name,
+		Admin.PERSONSEGMENT.SHORTNAME as ShortName
+	FROM
+		PSR
 	LEFT JOIN Admin.PERSONSEGMENT on
-		Admin.PERSONSEGMENT.ID = Admin.PERSONSEGMENTRELATION.SEGMENTID
+		Admin.PERSONSEGMENT.ID = PSR.SegmentId
 ),
 Person AS(
 	SELECT
@@ -25,12 +37,11 @@ Person AS(
 		(
 			Admin.PERSON.SURNAME + ' ' + Admin.PERSON.FIRSTNAME
 		) as Name,
-		Admin.PERSON.PERSONNUM AS Num,
+		Admin.PERSON.SURNAME2 AS Chanel,
 		Admin.PERSON.BIRTHDATE AS Birthdate,
 		Admin.PERSON.COUNTRY AS Country,
 		Admin.PERSON.SEX AS Sex,
 		Admin.PERSON.EMAIL AS Email,
-		Segment.Id AS SegmentId,
 		Segment.Name AS SegmentName,
 		Segment.ShortName AS SegmentShortName
 	FROM
@@ -61,22 +72,22 @@ Hotel AS(
 	LEFT JOIN R ON
 		Admin.ROOM.TYPEID = R.TypeId
 ) SELECT
---	count()
- Admin.RESERVE.ID as ReservId,
-	Admin.RESERVE.CREATEDTIME AS CreatedTime,
-	Admin.RESERVE.UPDATEDTIME AS UpdatedTime,
-	Person.Id AS PersonId,
-	Person.Name AS PeronName,
-	Person.Birthdate AS PersonBirthdate,
-	Person.Country AS PersonCountry,
-	Person.Sex AS PersonSex,
-	Person.SegmentId AS SegmentId,
-	Person.SegmentName AS SegmentName,
-	Person.SegmentShortName AS SegmentShortName,
-	Admin.PERIOD.BEGINDATE AS PeriodBegin,
-	Admin.PERIOD.ENDDATE AS PeriodEnd,
-	Hotel.Name AS HotelName,
-	Hotel.Room AS HotelRoom
+	count(DISTINCT Admin.RESERVE.ID ) --             Admin.RESERVE.ID as F_ReservId,
+ --             Admin.RESERVE.CREATEDTIME AS  F_CreatedTime,
+ --             Admin.RESERVE.UPDATEDTIME AS  F_UpdatedTime ,
+ --             Admin.RESERVE.ROOMPRICE AS  F_Sum ,
+ --             Admin.RESERVE.ISDELETED AS F_IsDeleted ,
+ --             Person.SegmentName AS F_Segment ,
+ --             Hotel.Name AS  F_Hotel ,
+ --             Hotel.Room AS  F_Room ,
+ --             Person.Name AS  F_Fio ,
+ --             Person.Sex AS  F_Sex ,
+ --             Person.Country AS  F_Country ,
+ --             Person.Email AS  F_Email ,
+ --             Person.Chanel AS  F_Chanel ,
+ --             Person.Birthdate AS F_Birthdate ,
+ --             Admin.PERIOD.BEGINDATE AS F_PeriodBegin ,
+ --             Admin.PERIOD.ENDDATE AS F_PeriodEnd 
 FROM
 	Admin.RESERVE
 LEFT JOIN Person ON
@@ -87,7 +98,8 @@ LEFT JOIN Admin.PERIOD ON
 	Admin.PERIOD.RESERVID = Admin.RESERVE.ID
 LEFT JOIN Admin.PERMANENTAGENT ON
 	Admin.PERMANENTAGENT.ID = Admin.RESERVE.TRAVELAGENTID
-WHERE
-	Admin.RESERVE.CREATEDTIME > '2018-04-01 00:00:00'
- --	and 
--- Admin.RESERVE.RESNUM = 145780 --Admin.RESERVE.ID
+where
+	Admin.RESERVE.ISDELETED = 0
+	and Admin.RESERVE.ISDELETED is not NULL
+	and Admin.RESERVE.id is not NULL
+	and Admin.RESERVE.ID > 0

@@ -10,7 +10,7 @@ from datetime import datetime, date, time, timedelta
 import subprocess
 import os
 
-import ReservesByDays
+# import ReservesByDays
 # import Reserves
 
 
@@ -100,13 +100,17 @@ def get_last_insert(mssql, tables_last_insertions, tableNAME):
 
 	if last_insert == None: 
 		last_insert = minDATE # raise Exception("Last insert value for table {} not found".format(tableNAME))
-				
-		mssql.cursor().execute("delete from %s.%s" % (mssql_SCHEMA, tableNAME))
-		mssql.commit()
+		
+		try:
+			mssql.cursor().execute("delete from %s.%s" % (mssql_SCHEMA, tableNAME))
+			mssql.commit()
+		except:
+			pass
 	
 	# print("last insert %s %s" % (tableNAME, last_insert.strftime('%Y/%m/%d %H:%M:%S')))
 
 	return last_insert
+
 
 def get_last_update(mssql, tables_last_updates, tableNAME):
 
@@ -120,82 +124,157 @@ def get_last_update(mssql, tables_last_updates, tableNAME):
 	return last_update
 
 
-def insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, FIELD_NAMES, donotUpdate):
+def insert_update_Reserves(CWD, currentTIME, mssql, edel, last_insert, last_update, FIELD_NAMES, fullUpdate):
 	try:
-	
-		# добавление
-		edel_data = pd.read_sql(select_for_insert_query, edel) #, index_col=ReservesByDays.MS_ReservesByDays_FIELDS)
-
-		edel_data.to_csv(path_or_buf=bcpFILE.format(CWD, tableNAME + "1"), index=False, sep=bcpSEP, header=False, columns=ReservesByDays.MS_ReservesByDays_FIELDS)
-		print("{:d} records for insert to {:s}".format(len(edel_data), tableNAME))
-
-		f = open(bcpFILE.format(CWD, tableNAME + "2"), "w", encoding="utf8")
-		if not f: raise Exception("cant open file for write")
-
-		for idx in range(len(edel_data.values)):
-			dtb = edel_data.loc[idx, "periodbegin"]
-			print("dtb")
-			dte = edel_data.loc[idx, "periodend"]
-			while dtb <= dte:
-				f.write(dtb.isoformat() + bcpSEP + str(edel_data.loc[idx, "сумма"]) + bcpSEP + str(edel_data.loc[idx, "reservid"]) + "\n")
-				dtb += timedelta(days=1)
-
-		f.close()
-		print("written")
-
-		return
-
-			
-		cmd = str(bcpCMD).format(mssql_SCHEMA, tableNAME, bcpFILE.format(CWD, tableNAME), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
-		p = subprocess.run(cmd) #, shell=True, stdin=PIPE, stdout=PIPE, stderr=subprocess.STDOUT, close_fds=True)
-		print(cmd)
-	
-		mssql.cursor().execute("update %s.%s set last_insert = '%s' where tbl_name = '%s'" % (mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), tableNAME))
-		if donotUpdate:
-			mssql.cursor().execute("update %s.%s set last_update = '%s' where tbl_name = '%s'" % (mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), tableNAME))
-			print("%s updated" % (tableNAME))
-	
-		mssql.commit()
-
-		print("{:d} records inserted to {:s}\n".format(len(edel_data), tableNAME))
-	
-		if donotUpdate:
-			return
-
 		
-		# обновление
-		edel_data = pd.read_sql(select_for_update_query, edel)
-		print("%s updates readed from Edelweis" % (tableNAME))
-	
-			
-		tableNAME_upd = tableNAME + sUPD
-			
-		edel_data.to_csv(path_or_buf=bcpFILE.format(CWD, tableNAME_upd), index=False, sep=bcpSEP, header=False)
-		print("%d records for update to %s" % (len(edel_data), tableNAME_upd))
-		
+		T_Reserves 		= "Reserves"
+		T_ReservesByDays = "ReservesByDays"
+		T_Reserves_upd = T_Reserves + sUPD
+		T_ReservesByDays_upd = T_ReservesByDays + sUPD
+
+		low_fields = []
+		for fld in defs.MS_Reserves_FIELDS.keys(): low_fields.append(fld.lower())
+
+		if fullUpdate:
+			try:
+				mssql.cursor().execute("DROP TABLE %s.%s" % (mssql_SCHEMA, T_Reserves))
+			except Exception as E:
+				pass
+
+			try:
+				mssql.cursor().execute("DROP TABLE %s.%s" % (mssql_SCHEMA, T_ReservesByDays))
+			except Exception as E:
+				pass
+
 		try:
-			mssql.cursor().execute("drop table %s.%s" % (mssql_SCHEMA, tableNAME_upd))
+			mssql.cursor().execute("CREATE TABLE %s.%s (%s)" % (mssql_SCHEMA, T_Reserves, defs.fields_types_str(defs.MS_Reserves_FIELDS)))
+			mssql.commit()
 		except Exception as E:
 			pass
 
-		mssql.cursor().execute("select * into {0}.{1} from {0}.{2} where 0 = 1".format(mssql_SCHEMA, tableNAME_upd, tableNAME))
-		mssql.commit()
-			
-		cmd = str(bcpCMD).format(mssql_SCHEMA, tableNAME_upd, bcpFILE.format(CWD, tableNAME_upd), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
-		p = subprocess.run(cmd)
+		try:
+			mssql.cursor().execute("CREATE TABLE %s.%s (%s)" % (mssql_SCHEMA, T_ReservesByDays, defs.fields_types_str(defs.MS_ReservesByDays_FIELDS)))
+			mssql.commit()
+		except Exception as E:
+			pass
+
+		# добавление
+		edel_data = pd.read_sql(defs.select_for_insert_query(last_insert), edel) #, index_col=ReservesByDays.MS_ReservesByDays_FIELDS)
+
+		# Брони
+		edel_data.to_csv(path_or_buf=bcpFILE.format(CWD, T_Reserves), index=False, sep=bcpSEP, header=False, columns=low_fields)
+		print("%d records written to %s" % (len(edel_data), bcpFILE.format(CWD, T_Reserves)))
+
+		# БрониПоДням
+		if not write_ReservesByDays_to_bcp(edel_data, T_ReservesByDays):
+			raise Exception("file not written")
+
+
+		cmd = str(bcpCMD).format(mssql_SCHEMA, T_Reserves, bcpFILE.format(CWD, T_Reserves), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
+		p = subprocess.run(cmd) #, shell=True, stdin=PIPE, stdout=PIPE, stderr=subprocess.STDOUT, close_fds=True)
 		print(cmd)
+
+		cmd = str(bcpCMD).format(mssql_SCHEMA, T_ReservesByDays, bcpFILE.format(CWD, T_ReservesByDays), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
+		p = subprocess.run(cmd) #, shell=True, stdin=PIPE, stdout=PIPE, stderr=subprocess.STDOUT, close_fds=True)
+		print(cmd)
+
+		mssql.cursor().execute("update %s.%s set last_insert = '%s' where tbl_name = '%s'" % (mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), T_Reserves))
+		mssql.cursor().execute("update %s.%s set last_insert = '%s' where tbl_name = '%s'" % (mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), T_ReservesByDays))
+		if fullUpdate:
+			mssql.cursor().execute("update %s.%s set last_update = '%s' where tbl_name = '%s'" % (mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), T_Reserves))
+			mssql.cursor().execute("update %s.%s set last_update = '%s' where tbl_name = '%s'" % (mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), T_ReservesByDays))
+			print("%s, %s updated" % (T_Reserves, T_ReservesByDays))
 	
-		fupdstr = defs.fields_upd_str(FIELD_NAMES, tableNAME, tableNAME_upd)
-		mssql.cursor().execute("UPDATE {0}.{1} SET {3} from {0}.{2} where {0}.{1}.ID = {0}.{2}.ID ".format(mssql_SCHEMA, tableNAME, tableNAME_upd, fupdstr))
-		mssql.cursor().execute("update {0}.{1} set last_update = '{2}' where tbl_name = '{3}'".format(mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), tableNAME))
-		mssql.cursor().execute("drop table %s.%s" % (mssql_SCHEMA, tableNAME_upd))
 		mssql.commit()
 
-		print("{:d} records updated in {:s}\n".format(len(edel_data), tableNAME))
+		print("{:d} records inserted to {:s}\n".format(len(edel_data), T_Reserves))
+	
+		if fullUpdate:
+			return
+		
+		# обновление
+		edel_data = pd.read_sql(defs.select_for_update_query(last_update), edel)
+			
+		# Брони
+		edel_data.to_csv(path_or_buf=bcpFILE.format(CWD, T_Reserves_upd), index=False, sep=bcpSEP, header=False, columns=low_fields)
+		print("%d records written to %s" % (len(edel_data), bcpFILE.format(CWD, T_Reserves_upd)))
+
+		# БрониПоДням
+		if not write_ReservesByDays_to_bcp(edel_data, T_ReservesByDays_upd):
+			raise Exception("file not written")
+
+
+		try:
+			mssql.cursor().execute("drop table %s.%s" % (mssql_SCHEMA, T_Reserves_upd))
+		except Exception as E:
+			pass
+
+		try:
+			mssql.cursor().execute("drop table %s.%s" % (mssql_SCHEMA, T_ReservesByDays_upd))
+		except Exception as E:
+			pass
+
+		mssql.cursor().execute("select * into {0}.{1} from {0}.{2} where 0 = 1".format(mssql_SCHEMA, T_Reserves_upd, T_Reserves))
+		mssql.cursor().execute("select * into {0}.{1} from {0}.{2} where 0 = 1".format(mssql_SCHEMA, T_ReservesByDays_upd, T_ReservesByDays))
+		mssql.commit()
+			
+		cmd = str(bcpCMD).format(mssql_SCHEMA, T_Reserves_upd, bcpFILE.format(CWD, T_Reserves_upd), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
+		p = subprocess.run(cmd)
+		print(cmd)
+			
+		cmd = str(bcpCMD).format(mssql_SCHEMA, T_ReservesByDays_upd, bcpFILE.format(CWD, T_ReservesByDays_upd), mssql_DATABASE, mssql_SERVER, bcpSEP, mssql_USERNAME, mssql_PASSWORD)
+		p = subprocess.run(cmd)
+		print(cmd)
+
+		res_id_lst = ""
+		for idx in range(len(edel_data.values)):
+			res_id_lst += str(edel_data.loc[idx, defs.F_ReservId.lower()]) + ","
+
+		fupdstr1 = defs.fields_upd_str(defs.MS_Reserves_FIELDS, T_Reserves, T_Reserves_upd)
+		# fupdstr2 = defs.fields_upd_str(defs.MS_ReservesByDays_FIELDS, T_ReservesByDays, T_ReservesByDays_upd)
+
+		mssql.cursor().execute("UPDATE {0}.{1} SET {3} FROM {0}.{2} WHERE {0}.{1}.{4} = {0}.{2}.{4} ".format(mssql_SCHEMA, T_Reserves, T_Reserves_upd, fupdstr1, defs.F_ReservId))
+		mssql.cursor().execute("DELETE FROM {0}.{1} WHERE {2} IN ({3})".format(mssql_SCHEMA, T_ReservesByDays, defs.F_ReservId, res_id_lst[:-1]))
+		mssql.cursor().execute("INSERT INTO {0}.{1} ({3}) SELECT {3} FROM {0}.{2}".format(mssql_SCHEMA, T_ReservesByDays, T_ReservesByDays_upd, defs.fields_str(defs.MS_ReservesByDays_FIELDS.keys())))
+		mssql.cursor().execute("DELETE FROM {0}.{1} WHERE {2} IN (SELECT {2} FROM {0}.{3} WHERE {4} = 1)".format(mssql_SCHEMA, T_ReservesByDays, defs.F_ReservId, T_Reserves, defs.F_IsDeleted))
+		mssql.cursor().execute("DELETE FROM {0}.{1} WHERE {2} = 1".format(mssql_SCHEMA, T_Reserves, defs.F_IsDeleted))
+		mssql.cursor().execute("UPDATE {0}.{1} SET last_update = '{2}' where tbl_name = '{3}'".format(mssql_SCHEMA, mssql_TABLE_UPDATES, currentTIME.strftime('%Y/%m/%d %H:%M:%S'), T_Reserves))
+		mssql.cursor().execute("DROP TABLE %s.%s" % (mssql_SCHEMA, T_Reserves_upd))
+		mssql.cursor().execute("DROP TABLE %s.%s" % (mssql_SCHEMA, T_ReservesByDays_upd))
+		mssql.commit()
+
+		print("{:d} records updated in {:s}\n".format(len(edel_data), T_Reserves))
 
 
 	except Exception as E:
-		print('error on update %s: %s\n' % (tableNAME, E), file=sys.stderr)
+		print('error on update %s: %s\n' % (T_Reserves, E), file=sys.stderr)
+
+
+def write_ReservesByDays_to_bcp(data, filename):
+	try:
+    	# разбираем по отдельным дням и пишем в файл
+		f = open(bcpFILE.format(CWD, filename), "w", encoding="utf8")
+		if not f: raise Exception("cant open file %s.bcp for write" % filename)
+
+		r_count = 0
+		print("len", len(data.values))
+		for idx in range(len(data.values)):
+			dtb = data.loc[idx, defs.F_PeriodBegin.lower()]
+			dte = data.loc[idx, defs.F_PeriodEnd.lower()]
+			while dtb <= dte:
+				f.write(dtb.isoformat() + bcpSEP + str(data.loc[idx, defs.F_Sum.lower()]) + bcpSEP + str(data.loc[idx, defs.F_ReservId.lower()]) + "\n")
+				dtb += timedelta(days=1)
+				r_count += 1
+
+		f.close()
+
+		print("%d records written to %s" % (r_count, bcpFILE.format(CWD, filename)))
+
+		return True
+
+	except Exception as E:
+		print('error on write_ReservesByDays_to_bcp: %s\n' % (E), file=sys.stderr)
+		return None
 
 
 
@@ -222,15 +301,14 @@ try:
 	currentTIME = datetime.now()
 
 
-	# # ----------- БрониПоДням ------------- #
-	tableNAME = "ReservesByDays"
-	print("\n----------- %s ----------" % tableNAME)
+	'''\n----------- БрониПоДням ----------'''
+	tableNAME = "Reserves"
 	last_insert = get_last_insert(mssql, tables_last_insertions, tableNAME)
 	last_update = get_last_update(mssql, tables_last_insertions, tableNAME)
-	select_for_insert_query = ReservesByDays.select_for_insert_query(last_insert)
-	select_for_update_query = "" # RESERVE.select_for_update_query(last_update)
+	# select_for_insert_query = defs.select_for_insert_query(last_insert)
+	# select_for_update_query = "" # RESERVE.select_for_update_query(last_update)
 
-	insert_update(tableNAME, CWD, currentTIME, mssql, edel, select_for_insert_query, select_for_update_query, ReservesByDays.FIELD_NAMES, last_insert == minDATE)
+	insert_update_Reserves(CWD, currentTIME, mssql, edel, last_insert, last_update, defs.MS_ReservesByDays_FIELDS.keys(), last_insert == minDATE)
 
 
 	# # # ----------- Брони ------------- #
